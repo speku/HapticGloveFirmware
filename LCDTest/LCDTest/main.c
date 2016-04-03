@@ -102,21 +102,23 @@ int main(void)
 
 	// announces the winner of the game
 	void announceWinner(int winner){
-		char winnerStr[10];
-		if (winner == 0) {
-			strcpy(winnerStr, "Player 1");
-			} else {
-			strcpy(winnerStr, "Player 2");
-		}
 		lcd_clrscr();
-		printToLCD(strcat(winnerStr, " wins!"));
+		if (winner == 0) {
+			lcd_puts("Player 1 wins");
+		} else {
+			lcd_puts("Player 2 wins");
+		}
 		_delay_ms(2000);
 	}
 
 	// announces the loser
 	void announceLooser(int looser){
 		lcd_clrscr();
-		printToLCD(strcat(looser == 0 ? "Player 2" : "Player 2", " wins!"));
+		if (looser == 0) {
+			lcd_puts("Player 2 wins");
+			} else {
+			lcd_puts("Player 1 wins");
+		}
 		_delay_ms(2000);
 	}
 
@@ -125,6 +127,8 @@ int main(void)
 	void wipeScoreAndQuestionIndex(){
 		score[0] = 0;
 		score[1] = 0;
+		fails[0] = 0;
+		fails[1] = 0;
 		currentQuestion = 0;
 	}
 
@@ -181,6 +185,7 @@ int main(void)
 	void waitForInput(){
 		int cursorPosition = 0;
 		char input[5] = "";
+		int inputCounter = 0;
 
 		int leftWasDown = 0, leftUpAgain = 0;
 		int rightWasDown = 0, rightUpAgain = 0;
@@ -207,25 +212,25 @@ int main(void)
 				rightUpAgain = 0;
 				lcd_gotoxy(cursorPosition, cursorY);
 				} else if (!rightWasDown && !rightUpAgain) {
-				rightWasDown = bit_is_clear(BUTTON_PIN, RIGHT_BUTTON);
+					rightWasDown = bit_is_clear(BUTTON_PIN, RIGHT_BUTTON);
 				} else if (rightWasDown && !rightUpAgain) {
-				rightUpAgain = !bit_is_clear(BUTTON_PIN, RIGHT_BUTTON);
-			}
+					rightUpAgain = !bit_is_clear(BUTTON_PIN, RIGHT_BUTTON);
+				}
 		}
 
 		void isSelect(){
 			if (selectWasDown && selectUpAgain){
-				strcat(input, digits[cursorPosition]);
-				lcd_gotoxy(strlen(questions[currentQuestion].question), 0);
+				input[inputCounter++ % 5] = digits[cursorPosition];
+				lcd_gotoxy(strlen(questions[currentQuestion].question), 1);
 				lcd_puts(input);
 				lcd_gotoxy(cursorPosition, cursorY);
 				selectWasDown = 0;
 				selectUpAgain = 0;
 				} else if (!selectWasDown && !selectUpAgain) {
-				selectWasDown = bit_is_clear(BUTTON_PIN, SELECT_BUTTON);
+					selectWasDown = bit_is_clear(BUTTON_PIN, SELECT_BUTTON);
 				} else if (selectWasDown && !selectUpAgain) {
-				selectUpAgain = !bit_is_clear(BUTTON_PIN, SELECT_BUTTON);
-			}
+					selectUpAgain = !bit_is_clear(BUTTON_PIN, SELECT_BUTTON);
+				}
 		}
 
 		int isConfirm(){
@@ -234,21 +239,36 @@ int main(void)
 				confirmUpAgain = 0;
 				return 1;
 				} else if (!confirmWasDown && !confirmUpAgain) {
-				confirmWasDown = bit_is_clear(BUTTON_PIN, CONFIRM_BUTTON);
+					confirmWasDown = bit_is_clear(BUTTON_PIN, CONFIRM_BUTTON);
 				return 0;
 				} else if (confirmWasDown && !confirmUpAgain) {
-				confirmUpAgain = !bit_is_clear(BUTTON_PIN, CONFIRM_BUTTON);
+					confirmUpAgain = !bit_is_clear(BUTTON_PIN, CONFIRM_BUTTON);
 				return 0;
-			}
+				}
 		}
 
 
 		void checkAnswer(){
 			if (strcmp(questions[currentQuestion].answer, input) == 0) {
 				score[activePlayer]++;
+				char info[1];
+				sprintf(info, "%d", WINNING_SCORE - score[activePlayer]);
+				lcd_clrscr();
+				lcd_puts("Jolly Good!");
+				lcd_gotoxy(0,1);
+				lcd_puts("to go: ");
+				lcd_puts(info);
 			} else {
-				fails[activePlayer]--;
+				fails[activePlayer]++;
+				char info[1];
+				sprintf(info, "%d", WRONG_ANSWER_THRESHOLD - fails[activePlayer]);
+				lcd_clrscr();
+				lcd_puts("Wrong Answer!");
+				lcd_gotoxy(0,1);
+				lcd_puts("lives left: ");
+				lcd_puts(info);
 			}
+			_delay_ms(2000);
 		}
 
 		lcd_gotoxy(0,0);
@@ -274,6 +294,7 @@ int main(void)
 
 	// initializes a new game state
 	void newGame(){
+		lcd_clrscr();
 		printToLCD(TITLE);
 		_delay_ms(3000);
 		wipeScoreAndQuestionIndex();
