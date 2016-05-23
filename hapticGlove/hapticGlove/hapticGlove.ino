@@ -51,7 +51,7 @@ void loop() {
 
 ISR(TIMER1_COMPA_vect){
   static uint8_t steps = 0;
-  pwmMask = steps > intensity ? 0xFF : 0;
+  pwmMask = steps < intensity ? 0xFF : 0;
   if (steps++ >= pwmSteps - 1){
     steps = 0;
   }
