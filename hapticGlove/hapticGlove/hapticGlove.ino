@@ -48,7 +48,7 @@ void loop() {
 
 
 ISR(TIMER1_COMPA_vect){
-  static byte steps = 0;
+  static int steps = 0;
   static byte finger = 1;
   finger %= 5;
   pwmMask[finger] = steps < intensity[finger] * 5 ? 0xFF : 0;
@@ -62,7 +62,7 @@ ISR(TIMER1_COMPA_vect){
 void serialEvent(){
   if (!Serial.available()) return;
   byte incoming = Serial.read();
-    if(!answerBack(incoming) && !adjustIntensity(incoming))newData = 1;
+    if(!answerBack(incoming) && !adjustIntensity(incoming)) newData = 1;
 }
 
 // sets the pin assigned to fingers to high or low depending on the received byte
@@ -82,6 +82,8 @@ byte adjustIntensity(byte incoming){
   byte i = incoming & 0b00000111;
   if (i > 0){ // if the rightmost 3 bits are not all 0 (is the case when vibration on/off info is submitted)
     intensity[i-1] = (incoming & 0b11111000) >> 3;// to offset 0 - has to be accounted for in client app
+    return 1;
   }
+  return 0;
 }
 
