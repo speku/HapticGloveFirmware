@@ -1,7 +1,7 @@
 // stuff for soft pwm
 
-int pwmSteps = 32;
-int intensity[5] = {16,16,16,16,16}; // translates into duty cycle (0 - 63)
+byte pwmSteps = 32;
+byte intensity[5] = {16,16,16,16,16}; // translates into duty cycle (0 - 31)
 
 byte incoming;
 byte pwmMask[5] = {0,0,0,0,0};
@@ -23,7 +23,7 @@ void setup() {
   // pwm init
   // disable interrupts
   cli();
-  OCR0A = 5000 / 5; // account for each finger
+  OCR0A = 5000
   TCCR1B = 1;
   TIMSK1 |= (1<<OCIE1A);
   // enable interrupts
@@ -37,10 +37,14 @@ void setup() {
 
 void loop() {
   if (newData){
+    
     // check the bits (only the 5 leftmost bits are relevant) to trigger vibration
-    for (byte i = 0; i < 5; i++){
-      vibrate(fingers[i], incoming & pwmMask[i], i);
-    }
+     vibrate(fingers[0], incoming & pwmMask[0], 0);
+     vibrate(fingers[1], incoming & pwmMask[1], 1);
+     vibrate(fingers[2], incoming & pwmMask[2], 2);
+     vibrate(fingers[3], incoming & pwmMask[3], 3);
+     vibrate(fingers[4], incoming & pwmMask[4], 4);
+     
      // returns a constant indicating which hand is represented by this code/device
     newData = 0;
   }
@@ -49,13 +53,17 @@ void loop() {
 
 ISR(TIMER1_COMPA_vect){
   static int steps = 0;
-  static byte finger = 1;
-  finger %= 5;
-  pwmMask[finger] = steps < intensity[finger] * 5 ? 0xFF : 0;
-  if (steps++ >= pwmSteps * 5 - 1){
+  
+  pwmMask[0] = steps < intensity[0] ? 0xFF : 0;
+  pwmMask[1] = steps < intensity[1] ? 0xFF : 0;
+  pwmMask[2] = steps < intensity[2] ? 0xFF : 0;
+  pwmMask[3] = steps < intensity[3] ? 0xFF : 0;
+  pwmMask[4] = steps < intensity[4] ? 0xFF : 0;
+  
+  if (steps++ >= pwmSteps - 1){
     steps = 0;
   }
-  finger++;
+
 }
 
 // interrupt routine invoked when new data has been received
