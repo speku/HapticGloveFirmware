@@ -1,97 +1,88 @@
-// stuff for soft pwm
+#include <Arduino.h>
+#include <SPI.h>
+#if not defined (_VARIANT_ARDUINO_DUE_X_) && not defined (_VARIANT_ARDUINO_ZERO_)
+  #include <SoftwareSerial.h>
+#endif
 
-byte pwmSteps = 32;
+#include "Adafruit_BLE.h"
+#include "Adafruit_BluefruitLE_SPI.h"
+#include "Adafruit_BluefruitLE_UART.h"
+#include "BluefruitConfig.h"
+
+byte pwmSteps = 32; // number of steps/ticks during a pwm period
+byte pwmFrequency = 100;
+byte cpuFrequency = 8000000;
+byte cpuTicksPerPWMTick = cpuFrequency / (pwmSteps * pwmFrequency);
 byte intensity[5] = {16,16,16,16,16}; // translates into duty cycle (0 - 31)
+// assigning fingers to pins
+// D2 = SDA
+byte fingers[5] = {2, 10, 9, 6, 12};
+// represents the right hand
+byte leftRight = 1;
+volatile int steps = 0;
 
-byte incoming;
-byte pwmMask[5] = {0,0,0,0,0};
-byte newData;
+Adafruit_BluefruitLE_UART ble(Serial1, BLUEFRUIT_UART_MODE_PIN);
 
-// assigning fingers to pins - starts of from thumb
-byte fingers[5] = {1, 2, 3, 4, 5};
+void setup(void)
+{
+  delay(500); 
+  Serial.begin(9600); // begin serial communication for debugging via usb
 
-// represents the left hand
-byte leftRight = 0;
-
-void setup() {
+  ble.begin(); // start bluetooth transmission
+  ble.echo(false);
 
   // setting all pins representing fingers to output
   for (byte i = 0; i < 5; i++){
     pinMode(fingers[i], OUTPUT);
   }
 
-  // pwm init
-  // disable interrupts
-  cli();
-  OCR0A = 5000
+  cli(); // disable interrupts globally
+  OCR0A = cpuTicksPerPWMTick; // setup output compare register
   TCCR1B = 1;
   TIMSK1 |= (1<<OCIE1A);
-  // enable interrupts
-  sei();
-
-  // initializing serial connection
-  Serial.begin(9600);
-  // wait for serial port to establish a connection
-  while(!Serial);
+  sei(); // enable interrupts globally
 }
+
 
 void loop() {
-  if (newData){
-    
-    // check the bits (only the 5 leftmost bits are relevant) to trigger vibration
-     vibrate(fingers[0], incoming & pwmMask[0], 0);
-     vibrate(fingers[1], incoming & pwmMask[1], 1);
-     vibrate(fingers[2], incoming & pwmMask[2], 2);
-     vibrate(fingers[3], incoming & pwmMask[3], 3);
-     vibrate(fingers[4], incoming & pwmMask[4], 4);
-     
-     // returns a constant indicating which hand is represented by this code/device
-    newData = 0;
+  while (ble.available()) // while data is in the receive buffer of the bluetooth module
+  {
+    byte incoming = ble.read(); // read the command
+    adjustIntensity(incoming);
+    respond(incoming);
   }
+   
+   digitalWrite(fingers[0], steps < intensity[0]);
+   digitalWrite(fingers[0], steps < intensity[1]);
+   digitalWrite(fingers[0], steps < intensity[2]);
+   digitalWrite(fingers[0], steps < intensity[3]);
+   digitalWrite(fingers[0], steps < intensity[4]);
 }
 
-
 ISR(TIMER1_COMPA_vect){
-  static int steps = 0;
-  
-  pwmMask[0] = steps < intensity[0] ? 0xFF : 0;
-  pwmMask[1] = steps < intensity[1] ? 0xFF : 0;
-  pwmMask[2] = steps < intensity[2] ? 0xFF : 0;
-  pwmMask[3] = steps < intensity[3] ? 0xFF : 0;
-  pwmMask[4] = steps < intensity[4] ? 0xFF : 0;
-  
   if (steps++ >= pwmSteps - 1){
     steps = 0;
   }
-
 }
 
-// interrupt routine invoked when new data has been received
-void serialEvent(){
-  if (!Serial.available()) return;
-  byte incoming = Serial.read();
-    if(!answerBack(incoming) && !adjustIntensity(incoming)) newData = 1;
-}
 
-// sets the pin assigned to fingers to high or low depending on the received byte
-void vibrate(byte pin, byte incoming, byte bitn){
-    digitalWrite(pin, bitRead(incoming, bitn) ? HIGH : LOW);
-}
-
-byte answerBack(byte incoming){
-  if (incoming == 1) {
-    Serial.println(leftRight);
-    return 1;
+void respond(byte incoming){
+  if (incoming == 0) {
+    ble.println(leftRight);
+    Serial.println("glove represents " + String(leftRight ? "right" : "left") + " hand");
   }
-  return 0;
 }
 
-byte adjustIntensity(byte incoming){
-  byte i = incoming & 0b00000111;
-  if (i > 0){ // if the rightmost 3 bits are not all 0 (is the case when vibration on/off info is submitted)
-    intensity[i-1] = (incoming & 0b11111000) >> 3;// to offset 0 - has to be accounted for in client app
-    return 1;
+void adjustIntensity(byte incoming){
+  if (incoming > 0){ // 0 byte is used to ask for left hand / right hand status
+    byte _finger = (incoming & 0b00000111) - 1;
+    byte _intensity = incoming >> 3;
+    intensity[_finger] = _intensity;
+    Serial.println("intensity of " + String(_finger == 0 ? "thumb" 
+                                          : _finger == 1 ? "index" 
+                                          : _finger == 2 ? "middle" 
+                                          : _finger == 3 ? "index" 
+                                          : "pinky") + " set to " + _intensity);
   }
-  return 0;
 }
 
