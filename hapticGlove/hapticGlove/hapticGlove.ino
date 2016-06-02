@@ -81,7 +81,7 @@ void adjustIntensity(byte incoming){
     Serial.println("intensity of " + String(_finger == 0 ? "thumb" 
                                           : _finger == 1 ? "index" 
                                           : _finger == 2 ? "middle" 
-                                          : _finger == 3 ? "index" 
+                                          : _finger == 3 ? "ring" 
                                           : "pinky") + " set to " + _intensity);
   }
 }
