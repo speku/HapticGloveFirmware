@@ -13,7 +13,7 @@ byte pwmSteps = 32; // number of steps/ticks during a pwm period
 byte pwmFrequency = 100;
 byte cpuFrequency = 8000000;
 byte cpuTicksPerPWMTick = cpuFrequency / (pwmSteps * pwmFrequency);
-byte intensity[5] = {16,16,16,16,16}; // translates into duty cycle (0 - 31)
+byte intensity[5]; // translates into duty cycle (0 - 31)
 // assigning fingers to pins
 // D2 = SDA
 byte fingers[5] = {2, 10, 9, 6, 12};
@@ -53,10 +53,10 @@ void loop() {
   }
    
    digitalWrite(fingers[0], steps < intensity[0]);
-   digitalWrite(fingers[0], steps < intensity[1]);
-   digitalWrite(fingers[0], steps < intensity[2]);
-   digitalWrite(fingers[0], steps < intensity[3]);
-   digitalWrite(fingers[0], steps < intensity[4]);
+   digitalWrite(fingers[1], steps < intensity[1]);
+   digitalWrite(fingers[2], steps < intensity[2]);
+   digitalWrite(fingers[3], steps < intensity[3]);
+   digitalWrite(fingers[4], steps < intensity[4]);
 }
 
 ISR(TIMER1_COMPA_vect){
