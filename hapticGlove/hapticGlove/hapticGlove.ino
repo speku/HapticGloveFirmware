@@ -25,9 +25,6 @@ Adafruit_BluefruitLE_UART ble(Serial1, BLUEFRUIT_UART_MODE_PIN);
 
 void setup(void)
 {
-  delay(500); 
-  Serial.begin(9600); // begin serial communication for debugging via usb
-
   ble.begin(); // start bluetooth transmission
   ble.echo(false);
 
@@ -69,7 +66,6 @@ ISR(TIMER1_COMPA_vect){
 void respond(byte incoming){
   if (incoming == 0) {
     ble.println(leftRight);
-    Serial.println("glove represents " + String(leftRight ? "right" : "left") + " hand");
   }
 }
 
@@ -78,11 +74,6 @@ void adjustIntensity(byte incoming){
     byte _finger = (incoming & 0b00000111) - 1;
     byte _intensity = incoming >> 3;
     intensity[_finger] = _intensity;
-    Serial.println("intensity of " + String(_finger == 0 ? "thumb" 
-                                          : _finger == 1 ? "index" 
-                                          : _finger == 2 ? "middle" 
-                                          : _finger == 3 ? "ring" 
-                                          : "pinky") + " set to " + _intensity);
   }
 }
 
